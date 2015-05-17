@@ -25,7 +25,7 @@ def new_page(request):
         else:
             data={"error":True,'response':validate_page.errors}
         return HttpResponse(json.dumps(data))
-    if request.user.is_admin:
+    if request.user.is_superuser:
         c = {}
         c.update(csrf(request))
         return render_to_response('admin/content/page/new-page.html',{'csrf_token':c['csrf_token']})
@@ -35,7 +35,7 @@ def new_page(request):
 
 @login_required
 def delete_page(request, pk):
-    if request.user.is_admin:
+    if request.user.is_superuser:
         Page.objects.get(pk = pk).delete()
         return HttpResponseRedirect('/portal/content/page/')
     else:
@@ -53,7 +53,7 @@ def edit_page(request, pk):
         else:
             data={"error":True,'response':validate_page.errors}
         return HttpResponse(json.dumps(data))
-    if request.user.is_admin:
+    if request.user.is_superuser:
         c = {}
         c.update(csrf(request))
         current_page = Page.objects.get(pk=pk)
@@ -64,7 +64,7 @@ def edit_page(request, pk):
 
 @login_required
 def delete_menu(request, pk):
-    if request.user.is_admin:
+    if request.user.is_superuser:
         Menu.objects.get(pk = pk).delete()
         return HttpResponseRedirect('/portal/content/menu/')
     else:
@@ -109,7 +109,7 @@ def add_menu(request):
             data={"error":True,'response':validate_menu.errors}
         return HttpResponse(json.dumps(data))
 
-    if request.user.is_admin:
+    if request.user.is_superuser:
         c = {}
         c.update(csrf(request))
         parent = Menu.objects.filter(parent=None).order_by('lvl')
@@ -155,7 +155,7 @@ def edit_menu(request, pk):
         else:
             data = {'error':True, 'response':validate_menu.errors}
         return HttpResponse(json.dumps(data))
-    if request.user.is_admin:
+    if request.user.is_superuser:
         parent = Menu.objects.filter(parent=None).order_by('lvl')
         current_menu = Menu.objects.get(pk = pk)
         c = {}

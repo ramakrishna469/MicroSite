@@ -7,7 +7,7 @@ import json
 from micro_admin.forms import ChangePasswordForm, UserForm
 from micro_admin.models import USER_ROLES, User
 from micro_blog.models import Tags, Post
-from employee.models import DailyReport, Leaves
+from employee.models import DailyReport
 import math
 import datetime
 
@@ -64,6 +64,7 @@ def new_user(request):
 
             if request.POST.get('user_roles') == 'Admin':
                 user.is_admin = True
+                user.is_superuser = True
 
             if request.POST.get('google_plus_url',False):
                 user.google_plus_url = request.POST.get('google_plus_url')
@@ -80,7 +81,7 @@ def new_user(request):
             data = {'error':True, 'response':validate_user.errors}
         return HttpResponse(json.dumps(data))
     else:
-        if request.user.is_admin:
+        if request.user.is_superuser:
             c = {}
             c.update(csrf(request))
             user_roles = USER_ROLES
@@ -94,7 +95,7 @@ def edit_user(request,pk):
     '''does the corresponding form validation and stores the edited details of administrator'''
     current_user = User.objects.get(pk = pk)
     if request.method == 'POST':
-        if request.user.is_admin and request.user == current_user:
+        if request.user.is_superuser and request.user == current_user:
             validate_user = UserForm(request.POST,instance = current_user)
             old_password = current_user.password
             if validate_user.is_valid():
@@ -103,6 +104,7 @@ def edit_user(request,pk):
                 current_user.user_roles = request.POST.get('user_roles')
                 if request.POST.get('user_roles') == 'Admin':
                     current_user.is_admin = True
+                    current_user.is_superuser = True
 
                 if request.POST.get('google_plus_url',False):
                     current_user.google_plus_url = request.POST.get('google_plus_url')
@@ -122,7 +124,7 @@ def edit_user(request,pk):
         else:
             print "not able to edit"
     else:
-        if request.user.is_admin:
+        if request.user.is_superuser:
             c = {}
             c.update(csrf(request))
             current_user = User.objects.get(pk = pk)
@@ -148,8 +150,7 @@ def user_info(request,pk):
     user = User.objects.get(pk = pk)
     blog_posts = Post.objects.filter(user=user)
     daily_reports = DailyReport.objects.filter(employee=user)
-    leaves = Leaves.objects.filter(user=user)
-    return render(request,'admin/user/view_userinfo.html',{'leaves':leaves,'daily_reports':daily_reports,'blog_posts':blog_posts,'user':user})
+    return render(request,'admin/user/view_userinfo.html',{'daily_reports':daily_reports,'blog_posts':blog_posts,'user':user})
 
 
 def blogposts(request,pk):
@@ -162,9 +163,3 @@ def reports(request,pk):
     user = User.objects.get(pk = pk)
     reports = DailyReport.objects.filter(employee=user)
     return render(request,'admin/user/reports.html',{'user':user,'reports':reports})
-
-
-def leaves(request,pk):
-    user = User.objects.get(pk = pk)
-    leaves = Leaves.objects.filter(user=user)
-    return render(request,'admin/user/leaves.html',{'user':user,'leaves':leaves})

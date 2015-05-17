@@ -54,7 +54,7 @@
             $('#' + key).after('<p class="failure">' + data.response[key] + '</p>');
           }
         } else {
-          window.location = "{% url 'docs:view_book_topics' slug=book.slug %}";
+          window.location = "{% url 'books:view_book_topics' slug=book.slug %}";
         }
       }
     });

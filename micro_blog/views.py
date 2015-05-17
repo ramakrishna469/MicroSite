@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from micro_blog.models import Image_File, Category, Tags, Post
 from pages.models import Page, simplecontact, Contact
-from PIL import Image
 import os
 import math
 from django.core.files.storage import default_storage
@@ -19,62 +18,6 @@ from ast import literal_eval
 from employee.models import DailyReport, Dailyreport_files
 from django.core.mail import send_mail
 from pages.forms import SimpleContactForm, ContactForm
-
-
-
-def store_image(img,location):
-    ''' takes the image file and stores that in the local file storage returns file name with
-    adding of timestamp to its name'''
-
-    uploaded_file = img
-    filename = uploaded_file.name
-    now_str = str(datetime.datetime.now())
-    now = now_str.replace(' ', '-')
-    title_str = filename.split(".")[-0]
-    title = title_str.replace(' ', '-')
-    ext = filename.split(".")[-1]
-    filename = title + now
-    x = location + filename + '.' + ext
-    y=open(x,'w')
-    for i in uploaded_file.chunks():
-        y.write(i)
-    y.close()
-    return filename + '.' + ext
-
-
-@csrf_exempt
-def upload_photos(request):
-    '''
-    takes all the images coming from the redactor editor and
-    stores it in the database and returns all the files'''
-
-    if request.FILES.get("upload"):
-        uploaded_file = request.FILES.get("upload")
-        stored_image = Image_File.objects.create(upload=uploaded_file, is_image=True)
-        size = (128, 128)
-        file_name = uploaded_file.name
-        thumb_file_name = 'thumb'+uploaded_file.name
-        temp_file=open(file_name,'w')
-        for i in uploaded_file.chunks():
-            temp_file.write(i)
-        temp_file.close()
-        im = Image.open(file_name)
-        im.thumbnail(size)
-        im.save(thumb_file_name)
-        imdata = open(thumb_file_name)
-
-        stored_image.thumbnail.save(thumb_file_name,fle(imdata) )
-        imdata.close()
-
-        os.remove(file_name)
-        os.remove(thumb_file_name)
-        uploaded_url = default_storage.url(stored_image.upload.url)
-    uploaded_url = '/'+uploaded_url
-    return HttpResponse("""
-    <script type='text/javascript'>
-        window.parent.CKEDITOR.tools.callFunction({0}, '{1}');
-    </script>""".format(request.GET['CKEditorFuncNum'], uploaded_url)
-)
 
 
 @csrf_exempt
@@ -106,7 +49,7 @@ def new_blog_category(request):
         else:
             data = {'error':True,'response':validate_blogcategory.errors}
         return HttpResponse(json.dumps(data))
-    if request.user.is_admin:
+    if request.user.is_superuser:
         c = {}
         c.update(csrf(request))
         return render_to_response('admin/blog/blog-category.html',{'csrf_token':c['csrf_token']})
@@ -125,7 +68,7 @@ def edit_category(request,category_slug):
         else:
             data = {'error':True,'response':validate_blogcategory.errors}
         return HttpResponse(json.dumps(data))
-    if request.user.is_admin:
+    if request.user.is_superuser:
         blog_category = Category.objects.get(slug=category_slug)
         c = {}
         c.update(csrf(request))
@@ -137,7 +80,7 @@ def edit_category(request,category_slug):
 @login_required
 def delete_category(request,category_slug):
     category = Category.objects.get(slug=category_slug)
-    if request.user.is_admin:
+    if request.user.is_superuser:
         category.delete()
         return HttpResponseRedirect('/blog/category-list/')
     else:
@@ -264,11 +207,11 @@ def new_post(request):
             blog_post.status = 'D'
             
             if request.POST.get('status') == "P":
-                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_admin:
+                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_superuser:
                     blog_post.status = 'P'
                 
             elif request.POST.get('status') == "T":
-                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_admin:
+                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_superuser:
                     blog_post.status = 'T'
             
             blog_post.save()
@@ -303,11 +246,11 @@ def edit_blog_post(request,blog_slug):
             blog_post.status = 'D'
             
             if request.POST.get('status') == "P":
-                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_admin:
+                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_superuser:
                     blog_post.status = 'P'
                 
             elif request.POST.get('status') == "T":
-                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_admin:
+                if request.user.user_roles == "Admin" or request.user.is_special or request.user.is_superuser:
                     blog_post.status = 'T'
             
             blog_post.save()
@@ -331,7 +274,7 @@ def edit_blog_post(request,blog_slug):
         return HttpResponse(json.dumps(data))
     blog_post = Post.objects.get(slug=blog_slug)
     categories = Category.objects.all()
-    if request.user.is_admin or blog_post.user ==request.user :
+    if request.user.is_superuser or blog_post.user ==request.user :
         c = {}
         c.update(csrf(request))
         return render(request,'admin/blog/blog-edit.html',{'blog_post':blog_post,'categories':categories,'csrf_token':c['csrf_token']})
@@ -342,7 +285,7 @@ def edit_blog_post(request,blog_slug):
 @login_required
 def delete_post(request,blog_slug):
     blog_post = Post.objects.get(slug=blog_slug)
-    if request.user == blog_post.user or request.user.is_admin:
+    if request.user == blog_post.user or request.user.is_superuser:
         blog_post.delete()
         data = {"error":False,'message':'Blog Post Deleted'}
     else:
@@ -396,8 +339,12 @@ def contact(request):
         data = {'error':True, 'errinfo':errors}
         return HttpResponse(json.dumps(data))
 
-    send_mail('Thank u for ur message', request.POST.get('message'),request.POST.get('email') ,[request.POST.get('email')], fail_silently=False)
-    data = {'error':False, 'response': 'submitted successfully'}
+    send_mail('Thank u for ur message', "Thank you for contacting us. We will get back to you soon!!!", "hello@micropyramid.com", [request.POST.get('email')], fail_silently=False)
+    message = "<p>From: "+request.POST.get('full_name')+"</p><p>Email Id:"+request.POST.get('email')+"</p><p>Message: "+request.POST.get('message')+"</p>"
+    if request.POST.get('phone'):
+        message += "<p>Contact Number:"+request.POST.get('phone')+"</p>"
+    send_mail('New Contact', message, request.POST.get('email'), ["hello@micropyramid.com"], fail_silently=False)
+
+    data = {'error': False, 'response': 'submitted successfully'}
 
     return HttpResponse(json.dumps(data))
-    

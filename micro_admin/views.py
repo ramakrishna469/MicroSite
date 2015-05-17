@@ -8,7 +8,6 @@ import json
 from micro_admin.models import career
 from micro_admin.forms import CareerForm
 from microsite.settings import BLOG_IMAGES
-from micro_blog.views import store_image
 import os
 from pages.models import simplecontact, Menu
 from django.db.models.aggregates import Max
@@ -50,11 +49,9 @@ def contacts(request):
 
 @login_required
 def delete_contact(request,pk):
-    print "hello"
     contact = simplecontact.objects.get(pk=pk)
-    if request.user.is_admin:
+    if request.user.is_superuser:
         contact.delete()
-        print "hello"
         data={'error':False,'response':'contact deleted successfully'}
         return HttpResponse(json.dumps(data))
     else:
@@ -63,62 +60,62 @@ def delete_contact(request,pk):
 
 @login_required
 def jobs(request):
-    jobs=career.objects.all()
-    return render_to_response('admin/content/jobs/job_list.html',{'jobs':jobs})
+    jobs = career.objects.all()
+    return render_to_response('admin/content/jobs/job_list.html', {'jobs': jobs})
 
 
-@login_required
-def new_job(request):
-    if request.method=="POST":
-        validate_blogcareer=CareerForm(request.POST)
-        if validate_blogcareer.is_valid():
-            validate_blogcareer = validate_blogcareer.save(commit=False)
-            if 'featured_image' in request.FILES:
-                validate_blogcareer.featured_image=store_image(request.FILES.get('featured_image'),BLOG_IMAGES)
-            else:
-                validate_blogcareer.featured_image=''
-            validate_blogcareer.save()
-            data={'error':False,'response':'jobs are created'}
-        else:
-            data={'error':True,'response':validate_blogcareer.errors}
-        return HttpResponse(json.dumps(data))
-    else:
-        if request.user.is_admin:
-            c={}
-            c.update(csrf(request))
-            return render_to_response('admin/content/jobs/job.html',{'jobs':jobs,'csrf_token':c['csrf_token']})
-        else:
-            return render_to_response('admin/accessdenied.html')
+# @login_required
+# def new_job(request):
+#     if request.method=="POST":
+#         validate_blogcareer=CareerForm(request.POST)
+#         if validate_blogcareer.is_valid():
+#             validate_blogcareer = validate_blogcareer.save(commit=False)
+#             if 'featured_image' in request.FILES:
+#                 validate_blogcareer.featured_image=store_image(request.FILES.get('featured_image'),BLOG_IMAGES)
+#             else:
+#                 validate_blogcareer.featured_image=''
+#             validate_blogcareer.save()
+#             data={'error':False,'response':'jobs are created'}
+#         else:
+#             data={'error':True,'response':validate_blogcareer.errors}
+#         return HttpResponse(json.dumps(data))
+#     else:
+#         if request.user.is_admin:
+#             c={}
+#             c.update(csrf(request))
+#             return render_to_response('admin/content/jobs/job.html',{'jobs':jobs,'csrf_token':c['csrf_token']})
+#         else:
+#             return render_to_response('admin/accessdenied.html')
 
-@login_required
-def edit_job(request,pk):
-    if request.method=="POST":
-        current_careers=career.objects.get(pk=pk)
-        validate_blogcareer=CareerForm(request.POST,instance=current_careers)
-        if validate_blogcareer.is_valid():
-            validate_blogcareer = validate_blogcareer.save(commit=False)
-            if 'featured_image' in request.FILES:
-                if current_careers.featured_image:
-                    os.remove(BLOG_IMAGES + current_careers.featured_image)
-                validate_blogcareer.featured_image=store_image(request.FILES.get('featured_image'),BLOG_IMAGES)
-            validate_blogcareer.save()
-            data={'error':False,'response':'job updated successfully'}
-        else:
-            data={'error':True,'response':validate_blogcareer.errors}
-        return HttpResponse(json.dumps(data))
-    else:
-        if request.user.is_admin:
-            blog_career=career.objects.get(pk=pk)
-            c={}
-            c.update(csrf(request))
-            return render_to_response('admin/content/jobs/job_edit.html',{'blog_career':blog_career,'csrf_token':c['csrf_token']})
-        else:
-            return render_to_response('admin/accessdenied.html')
+# @login_required
+# def edit_job(request,pk):
+#     if request.method=="POST":
+#         current_careers=career.objects.get(pk=pk)
+#         validate_blogcareer=CareerForm(request.POST,instance=current_careers)
+#         if validate_blogcareer.is_valid():
+#             validate_blogcareer = validate_blogcareer.save(commit=False)
+#             if 'featured_image' in request.FILES:
+#                 if current_careers.featured_image:
+#                     os.remove(BLOG_IMAGES + current_careers.featured_image)
+#                 validate_blogcareer.featured_image=store_image(request.FILES.get('featured_image'),BLOG_IMAGES)
+#             validate_blogcareer.save()
+#             data={'error':False,'response':'job updated successfully'}
+#         else:
+#             data={'error':True,'response':validate_blogcareer.errors}
+#         return HttpResponse(json.dumps(data))
+#     else:
+#         if request.user.is_admin:
+#             blog_career=career.objects.get(pk=pk)
+#             c={}
+#             c.update(csrf(request))
+#             return render_to_response('admin/content/jobs/job_edit.html',{'blog_career':blog_career,'csrf_token':c['csrf_token']})
+#         else:
+#             return render_to_response('admin/accessdenied.html')
 
 @login_required
 def delete_job(request,pk):
     careers=career.objects.get(pk=pk)
-    if request.user.is_admin:
+    if request.user.is_superuser:
         careers.delete()
         return HttpResponseRedirect('/portal/jobs/')
     else:
@@ -145,7 +142,7 @@ def menu_order(request,pk):
             if lvlmax == curr_link.lvl:
                 data = {'error':True,'message':'You cant move down.'}
             count=Menu.objects.all().count()
-            if count ==curr_link.lvl:
+            if count == curr_link.lvl:
                 data = {'error':True,'message':'You cant move down.'}
             else:
                 try:
@@ -156,7 +153,7 @@ def menu_order(request,pk):
                     down_link.save()
                 except ObjectDoesNotExist:
                     pass
-                data = {'error':False}
+                data = {'error': False}
         else:
             link_parent = Menu.objects.get(pk=pk).parent
             curr_link = Menu.objects.get(pk=pk)

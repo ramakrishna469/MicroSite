@@ -67,7 +67,7 @@
             $('#' + key).after('<p class="failure">' + data.response[key] + '</p>');
           }
         } else {
-          window.location = "{% url 'docs:books' %}";
+          window.location = "{% url 'books:books' %}";
         }
       }
     });
